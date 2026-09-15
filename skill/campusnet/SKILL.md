@@ -204,7 +204,7 @@ cron 环境取不到密码、WAN 口 MAC/IP 变了、固件升级没保留配置
 
 打包时有两个坑：
 
-- **WorkBuddy 托管版 Python 没编译 tkinter**，会 `ModuleNotFoundError: No module named 'tkinter'`。
+- **托管分发的 Python 往往没编译 tkinter**，会 `ModuleNotFoundError: No module named 'tkinter'`。
   要用商店版 Python 3.10（`WindowsApps\python3.10.exe`）建构建 venv。
 - `--icon` 传相对路径会被 PyInstaller 按 `--specpath` 解析，
   必须传**绝对路径**（build_exe.py 已处理）。

@@ -127,9 +127,15 @@ def pytest_runtest_logreport(report):
     #   2. `%` 要转义成 `%25` —— 断言里出现 `%3F`、`%E4%B8%AD`
     #      这类百分号编码是常事，不转义会被当成转义序列。
     single_line = " | ".join(line.strip() for line in tail.splitlines() if line.strip())
-    print(
-        "\n::error title=pytest 失败: {0}::{1}".format(
-            report.nodeid, single_line.replace("%", "%25")
-        ),
-        flush=True,
+    line = "\n::error title=pytest failed: {0}::{1}".format(
+        report.nodeid, single_line.replace("%", "%25")
     )
+    try:
+        print(line, flush=True)
+    except UnicodeEncodeError:
+        # Windows runner 控制台是 cp1252，编不出中文 —— 直接 print 会抛
+        # UnicodeEncodeError，pytest 整个内部错误（exit code 3），注解反而一条
+        # 都发不出去（某个版本全平台注解消失、Windows 只剩 exit 3，就是它）。
+        # 编不出的字符转成 ``\uXXXX`` 转义，保证注解无论如何都能发出去。
+        enc = getattr(sys.stdout, "encoding", None) or "ascii"
+        print(line.encode(enc, "backslashreplace").decode(enc), flush=True)

@@ -345,12 +345,13 @@ def interface_ready(text: str = "") -> bool:
     传 ``text`` 是为了让测试能在不碰真机的情况下验判定逻辑；
     不传就自己去调一次 netsh。
     """
-    system = platform.system()
-    if system != "Windows":
-        # 其它平台没有等价的"无线电开关"概念，交给各自的命令自己报错
-        return True
-
     if not text:
+        if platform.system() != "Windows":
+            # 其它平台没有等价的"无线电开关"概念，交给各自的命令自己报错。
+            # 这个判断必须放在 ``not text`` 里面 —— 传了 text 就是纯判定逻辑，
+            # 在任何平台都要给出一致结论，测试就是靠传 text 不碰真机来验的
+            # （曾经放在函数开头，Linux/macOS CI 上测试全被 ``return True`` 短路）。
+            return True
         code, text = _run(["netsh", "wlan", "show", "interfaces"])
         if code != 0 and not text:
             return False

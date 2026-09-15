@@ -541,7 +541,6 @@ class App:
         self._spawn(self._job_toggle_autostart)
 
     def save_setup(self) -> None:
-        from tkinter import messagebox
         username = self.var_username.get().strip()
         password = self.var_password.get()
         if not username:
