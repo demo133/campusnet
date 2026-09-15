@@ -196,6 +196,22 @@ cron 环境取不到密码、WAN 口 MAC/IP 变了、固件升级没保留配置
 请求**通了但认证失败** → 网络和门户都正常，问题在账号或参数。
 请求**本身就不通** → 是网络层问题，不是 campusnet 的问题，别再改配置了。
 
+## 图形界面版（给小白）
+
+仓库里带一个 tkinter GUI（`campusnet/gui.py`，首次运行引导填账号，
+错误全部翻译成大白话），打包脚本 `release/build_exe.py` 产出单文件
+`dist/校园网助手.exe`（约 10 MB，双击即用，自带 keyring）。
+
+打包时有两个坑：
+
+- **WorkBuddy 托管版 Python 没编译 tkinter**，会 `ModuleNotFoundError: No module named 'tkinter'`。
+  要用商店版 Python 3.10（`WindowsApps\python3.10.exe`）建构建 venv。
+- `--icon` 传相对路径会被 PyInstaller 按 `--specpath` 解析，
+  必须传**绝对路径**（build_exe.py 已处理）。
+
+GUI 冒烟自检：设环境变量 `CAMPUSNET_GUI_SMOKE=2`（秒数，加 `,setup` 测设置页），
+进程会自动关闭，退出码 0 即通过。
+
 ## 边界（不要越界）
 
 - **不要编造**门户地址、`R1`/`R3`/`para` 取值。这些只能来自 `detect` 或用户实测。
