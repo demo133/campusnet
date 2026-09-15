@@ -1,11 +1,13 @@
 # campusnet · 校园网自动登录
 
 > 一条命令搞定校园网 Portal 认证。开机自动登录，断网自动重连。
+> **不会命令行？拉到 [图形版](#图形版双击就能用windows)，下载一个 exe 双击就能用。**
 
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](#为什么零依赖)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#)
+[![GUI](https://img.shields.io/badge/Windows%20%E5%9B%BE%E5%BD%A2%E7%89%88-%E5%8F%8C%E5%87%BB%E5%8D%B3%E7%94%A8-18b47a.svg)](#图形版双击就能用windows)
 
 零依赖 · 跨平台 · 自动识别认证系统 · 支持 Dr.COM / 深澜 / 锐捷 / 华为 eportal
 
@@ -18,8 +20,45 @@ $ campusnet status
 • 本机 IP：10.99.0.40
 ```
 
+## 图形版：双击就能用（Windows）
+
+给完全不想碰命令行的人准备的：**一个约 10 MB 的 exe，免安装、不用装 Python**，
+底层和命令行版是同一套核心，连配置文件都是同一份。
+
+**怎么拿到：**
+
+1. 打开 [Releases](../../releases) 页，下载最新的 `校园网助手-便携版.zip`；
+2. 解压，双击 `校园网助手.exe`（首次运行如果 Windows 弹蓝色警告，
+   点「**更多信息 → 仍要运行**」—— 程序没有做代码签名，只第一次会弹）；
+3. 跟着向导填一遍：**学号、密码**（可勾选显示），**运营商**下拉选择，
+   **校园 Wi-Fi 名**会自动带上当前连的网，勾上「**开机自动登录**」，
+   点「保存并立即连接」—— 保存完它会立刻帮你认证一次。
+
+之后每次开机它自己把网连好；想手动操作时，主界面就几个大按钮：
+
+| 按钮 | 干什么用 |
+| --- | --- |
+| **立即重新认证** | 网页打不开、认证过期时点一下，重新走一遍登录 |
+| **一键体检** | 「本来好好的怎么突然不行了」—— 逐项排查，给人话结论 |
+| **账号设置** | 改学号密码、换运营商、改 Wi-Fi 名 |
+| **开机自启** | 开关式切换，装/卸开机自动登录 |
+
+几个你可能关心的点：
+
+- **报错全是中文人话**，不会甩你一行 `Connection refused`；
+  程序自己崩了这种极端情况也有日志：`%LOCALAPPDATA%\campusnet\gui-errors.log`
+- **密码默认存进 Windows 凭据管理器**，配置文件里不留明文（打包版自带 keyring）
+- 支持系统：**Windows 10 / 11（64 位）**
+- **卸载**：在主界面把「开机自启」关掉，删掉 exe 就行；
+  想清干净再删 `%APPDATA%\campusnet` 文件夹（里面没有明文密码）
+- 命令行的所有高级玩法（`watch` 参数、`--option` 逃生舱、路由器部署）图形版没有 ——
+  那些需求请用下面的命令行版，两者共用一份配置，互不冲突
+- 想自己打包：仓库里 `release/build_exe.py` 一键出包（需要能跑 tkinter 的 Python
+  和 PyInstaller，脚本内置了两个打包坑的处理）
+
 ## 特性
 
+- **图形版** —— Windows 双击即用，不需要 Python 和命令行（见[上文](#图形版双击就能用windows)）
 - **自动识别认证系统** —— 探测门户页面做指纹识别，不用你告诉它学校用的哪家
 - **换过 Wi-Fi 也能自己连回来** —— 手动切到手机热点后重启，会自动切回校园网
 - **支持先选运营商** —— 登录前要挑「移动 / 电信 / 联通」的学校也能用
@@ -32,6 +71,9 @@ $ campusnet status
 - **凭据安全** —— 优先环境变量 / 系统钥匙串，明文落盘需显式同意
 
 ## 安装
+
+> **没有 Python、不想敲命令？** 直接看上面[图形版](#图形版双击就能用windows)，
+> 下载 exe 就能用，下面的内容都可以跳过。
 
 ```bash
 pip install git+https://github.com/demo133/campusnet.git
@@ -267,7 +309,7 @@ campusnet doctor
 
 | 平台 | 开机自启怎么做的 | 备注 |
 | --- | --- | --- |
-| Windows | 注册表 `HKCU\...\Run` | 用 `pythonw.exe`，不弹黑框 |
+| Windows | 注册表 `HKCU\...\Run` | 用 `pythonw.exe`，不弹黑框；或直接用[图形版](#图形版双击就能用windows) |
 | macOS | `~/Library/LaunchAgents/com.campusnet.watch.plist` | `KeepAlive` 挂了自动拉起 |
 | Linux | systemd 用户服务；没有 systemd 时退回 `crontab @reboot` | 不需要 root |
 | **OpenWrt** | **procd init 脚本 + `/etc/crontabs/root` 每 5 分钟一次** | 见 [docs/openwrt.md](docs/openwrt.md) |
@@ -287,6 +329,8 @@ flash 小到装不下 Python 的机器，用
 | --- | --- |
 | Windows | `%APPDATA%\campusnet\config.json` |
 | macOS / Linux | `~/.config/campusnet/config.json` |
+
+> 图形版用的就是这份配置 —— 命令行配好的，图形版打开就能看到；反过来也一样。
 
 主要字段：
 
@@ -321,6 +365,19 @@ export CAMPUSNET_PASSWORD=你的密码
 只有加 `--save-password` 才会明文写进配置文件。
 
 ## 常见问题
+
+**图形版和命令行版是什么关系？**
+同一套核心、同一份配置文件。图形版是把"配一次 + 日常点两下"做成了窗口；
+命令行版的能力更全（`watch` 参数调节、`--option` 逃生舱、`once` + cron、路由器部署）。
+两个随便混用，改来改去不会互相覆盖账号以外的设置。
+
+**双击图形版弹出「Windows 已保护你的电脑」？**
+程序没做代码签名，SmartScreen 的正常提示。点「更多信息 → 仍要运行」，
+只第一次会弹。介意的同学可以自己用 `release/build_exe.py` 从源码打包。
+
+**图形版怎么卸载？**
+主界面把「开机自启」关掉，删掉 exe 即可；想彻底清理再删配置目录
+（Windows 是 `%APPDATA%\campusnet`），里面没有明文密码。
 
 **会不会反复失败把账号锁了？**
 不会。命中即停，每次先探测是否已联网，已联网直接退出；`auto` 模式单次最多试 3 个 provider。
