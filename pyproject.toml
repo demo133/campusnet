@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "campusnet"
+version = "0.1.0"
+description = "Zero-dependency CLI that auto-logs-in to campus network captive portals (Dr.COM / Srun / Ruijie / Huawei eportal)"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "campusnet contributors" }]
+keywords = ["campus", "network", "portal", "captive-portal", "drcom", "srun", "ruijie", "eportal", "校园网", "认证"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet",
+    "Topic :: System :: Networking",
+]
+dependencies = []
+
+[project.optional-dependencies]
+keyring = ["keyring>=23"]
+dev = ["pytest>=7"]
+
+[project.urls]
+Homepage = "https://github.com/demo133/campusnet"
+Issues = "https://github.com/demo133/campusnet/issues"
+
+[project.scripts]
+campusnet = "campusnet.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["campusnet*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+# 只做实质性的静态检查（未用导入 / 未定义名 / 可疑写法 / import 顺序），
+# 不追求格式统一 —— 项目里的中文全角标点、旧式 .format() 都是有意为之，
+# 让 linter 去"修"它们只会刷出一堆无意义的 diff。
+line-length = 100
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["F", "E9", "B", "I"]
+# 下面这些是有意为之，不是疏忽：
+#   RUF001/2/3 —— 全角标点是中文文案的一部分
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+# 测试里经常要写"故意用不到的参数"（fake 对象签名要对齐）
+"tests/*" = ["B", "ARG"]
+

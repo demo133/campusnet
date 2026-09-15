@@ -1,0 +1,127 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: test (py${{ matrix.python }} / ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.8", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          pip install -e .
+
+      - name: Run tests
+        shell: bash
+        # 失败时额外做两件事，都是为了"不用登录也能知道挂在哪"：
+        #   1. pytest 的摘要写进 job summary（给网页上看的人）；
+        #   2. `tests/conftest.py` 里的 pytest_runtest_logreport 会把
+        #      每条失败发成 **check-run annotation**。
+        #
+        # ⚠ 只有 (2) 是能通过 API 拿到的，命令是
+        #     GET /repos/<o>/<r>/check-runs/<id>/annotations
+        # 实测 `check-runs/<id>.output.summary` 取回来是空的 ——
+        # 所以不要指望从 API 读 job summary（这条注释原来写错了，已更正）。
+        # 这个仓库的 job 日志匿名是 403，annotation 是唯一的自动诊断通道。
+        run: |
+          set +e
+          pytest -q
+          rc=$?
+          if [ $rc -ne 0 ]; then
+            {
+              echo "### pytest 失败摘要（py${{ matrix.python }} / ${{ matrix.os }}）"
+              echo '```'
+              pytest -q --tb=short 2>&1 | tail -80
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit $rc
+
+      - name: CLI smoke test
+        run: |
+          python -m campusnet --version
+          python -m campusnet providers
+          python -m campusnet status
+          python -m campusnet wifi
+          python -m campusnet wifi list
+          python -m campusnet carrier
+          python -m campusnet once
+          python -m campusnet doctor || true
+
+      - name: CLI smoke test (英文字符集控制台)
+        # 回归锁定：GitHub 的 Windows runner 控制台是 cp1252，编不出中文和 ✔ ─ 这类字符。
+        # 这里在三个平台上都强制一次，防止再出现「只在 Windows 上炸」的问题。
+        env:
+          PYTHONIOENCODING: cp1252
+        run: |
+          python -m campusnet --version
+          python -m campusnet providers
+          python -m campusnet status
+          python -m campusnet autostart status
+          python -m campusnet wifi
+          python -m campusnet wifi --help
+          python -m campusnet carrier
+          python -m campusnet once
+          python -m campusnet doctor || true
+          python -m campusnet login --option r1=1 --option para=00 || true
+
+      - name: Wi-Fi 逻辑回归（不依赖真实网卡）
+        # 这条守住那个 bug：必须先切 Wi-Fi 再判联网。顺序反了测试就会红。
+        run: pytest -q tests/test_wifi.py
+
+      - name: 运营商归一化回归
+        # 守住两个曾经的坑：normalize 必须幂等（campus_telecom ≠ telecom），
+        # 「校园电信」的 R1=1 不能被降级成纯「电信」的 R1=0。
+        run: pytest -q tests/test_carrier.py
+
+      - name: OpenWrt / --option / doctor 回归
+        # 守住三件事：OpenWrt 分支必须挡住通用 Linux 分支、安装路径不能碰 /tmp、
+        # --option 的值必须是字符串（para=00 不能被吃成 para=0）。
+        run: pytest -q tests/test_openwrt.py
+
+      - name: 纯 shell 版 OpenWrt 脚本（配置解析 + URL 编码）
+        # **这一条必须在 macOS 上也跑。** 这个文件里已经栽过两个
+        # 「Linux 绿、macOS 红」的问题，而且都只在日志里能看到具体栽在哪：
+        #   1. urlencode 用 awk 的 sprintf("%c") 反查字符 —— BSD awk 不认，
+        #      任何输入都变成一串 %3F；
+        #   2. 读配置的 sed 用了 GNU 扩展 `\+` —— BSD sed 在默认 BRE 模式下
+        #      把它当**字面加号**，整条规则一条都匹配不到（静默失效）。
+        # 现在实现只用 POSIX BRE / 按字节整数运算，并且测试脚本里加了
+        # **静态检查**：扫到 sed 行里出现 \+ \? \| 就直接红，不等 CI 跑完。
+        #
+        # 失败时会把每条断言发成 check-run annotation（见 test_shell.sh 的
+        # annotate()），所以不用登录也能通过公开 API 看到具体哪条红了。
+        shell: bash
+        run: sh tests/test_shell.sh
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      # 规则集在 pyproject.toml 的 [tool.ruff] 里 —— 只查实质性问题
+      # （未用导入 / 未定义名 / 可疑写法 / import 顺序），不含格式类规则。
+      # 现在是"硬失败"：一旦有人提交死导入或写错名字，CI 会直接红。
+      - run: ruff check campusnet tests

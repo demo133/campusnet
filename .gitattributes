@@ -1,0 +1,7 @@
+# 统一换行符，避免 Windows / *nix 之间来回改文件
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.pdf binary
