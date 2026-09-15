@@ -82,9 +82,30 @@ python <skill>/scripts/run.py setup
 }
 ```
 
-**密码不要写进配置文件。** 用环境变量 `CAMPUSNET_PASSWORD` 提供；
-只有确实需要"无人值守且拿不到环境变量"时，才用 `--save-password`
-写入配置并 `chmod 600`。
+**密码存哪里 —— 这里有个坑，务必跟用户说清楚。**
+
+`setup` 拿到密码后按顺序决定存哪：
+
+1. **装了 `keyring`**（系统钥匙串）→ 问用户要不要存进去，**推荐存**。
+   Windows 走凭据管理器，不落明文，这是最好的选择。
+2. **加了 `--save-password`** → **明文**写进配置文件。
+   Windows 上 `chmod` 不生效，就是明文躺在 `%APPDATA%\campusnet\config.json` 里。
+3. **两个都没有** → **密码直接丢掉**。向导只打一句"密码未保存 —— 请用环境变量提供"，
+   然后照常"配置已保存 ✔"结束。
+
+第 3 种最坑：**向导跑完、看着一切正常，实际开机照样登录不了。**
+用户说"setup 跑完了"但登录还是失败时，先查这个 ——
+`campusnet doctor` 里账号那行会写"取不到密码"。
+
+所以引导用户时，二选一，别让他走到第 3 条：
+
+```sh
+python -m pip install keyring          # 装完 setup 会问"存进钥匙串吗"，回车即可
+python <skill>/scripts/run.py setup
+```
+
+无人值守（cron / 计划任务）**优先用环境变量 `CAMPUSNET_PASSWORD`**；
+`--save-password` 只在"确实取不到环境变量"时才用。
 
 ### 登录前要先选运营商
 

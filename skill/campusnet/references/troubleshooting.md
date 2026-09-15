@@ -26,6 +26,7 @@ python3 -m campusnet doctor
 | 报 SSL / ssl 相关错误 | B3 |
 | `No module named campusnet` | B4 |
 | 提示已联网，但其实上不了网 | B5 |
+| 日志里某家接口全 404，最后却认证成功了 | B7 |
 
 ---
 
@@ -227,6 +228,36 @@ python3 -m campusnet watch --option wifi_attempts=3 --option wifi_ready_timeout=
   先确认只有一个在管，再查别的。
 - 手动 `login` **没有**重试（刻意设计：要快速给结论）。
   所以"手动跑一次失败、守护模式却成功"是正常的，不是 bug。
+
+### B7. 指纹识别成 drcom，但 drcom 全报 404，最后是 eportal 成功
+
+**这是正常现象，不用改配置。** 实测遇到过：门户页面对 `drcom` 的指纹匹配度
+1.00（Server 头也是 `DrcomServer1.0`），但 `/drcom/login` 这个 JSONP 接口
+被关掉了 —— 80 / 801 / 803 三个端口全返 404。
+随后 `eportal` 走 `:801/eportal/?c=ACSetting&a=Login` 成功。
+
+也就是说：**页面长得像哪家 ≠ 哪家的接口开着**。
+程序会按置信度依次尝试，`drcom` 失败后自动落到 `eportal`，不需要人工干预。
+
+`--verbose` 里长这样：
+
+```text
+! [drcom] 失败：所有 Dr.COM 接口均未成功。最后一次返回：jsonp+wlanuserip：HTTP 404 未识别响应
+• 使用 通用 eportal / 华为 AC 登录…
+✔ [eportal] 成功：认证成功
+```
+
+想省掉那几轮 404，可以把 provider 固定下来：
+
+```sh
+python3 -m campusnet once --provider eportal
+```
+
+或者在配置里写 `"provider": "eportal"`。
+
+**别把这里的结果当 bug 报。** 判断依据是最后有没有 `认证成功`，
+中间某家的 404 只说明那家的接口没开。
+
 
 ---
 
