@@ -8,12 +8,14 @@ from .base import DetectContext, LoginResult, Provider
 from .custom import CustomProvider
 from .drcom import DrComProvider
 from .eportal import EportalProvider
+from .eportal_portal import EportalPortalProvider
 from .ruijie import RuijieProvider
 from .srun import SrunProvider
 
 #: 注册顺序决定了同分时的优先级
 PROVIDERS: Dict[str, Type[Provider]] = {
-    p.name: p for p in (DrComProvider, SrunProvider, RuijieProvider, EportalProvider, CustomProvider)
+    p.name: p for p in (DrComProvider, SrunProvider, RuijieProvider, EportalProvider,
+                        EportalPortalProvider, CustomProvider)
 }
 
 __all__ = [
@@ -25,6 +27,7 @@ __all__ = [
     "SrunProvider",
     "RuijieProvider",
     "EportalProvider",
+    "EportalPortalProvider",
     "CustomProvider",
     "get_provider",
     "fingerprint",
@@ -58,5 +61,5 @@ def rank(ctx: DetectContext, limit: int = 3) -> List[str]:
     names = [name for name, _ in fingerprint(ctx)]
     if not names:
         # 全都没认出来 —— 给一个保守的兜底顺序
-        names = ["drcom", "eportal", "srun", "ruijie"]
+        names = ["drcom", "eportal", "eportal_portal", "srun", "ruijie"]
     return names[:limit]

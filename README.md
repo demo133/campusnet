@@ -9,7 +9,7 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#)
 [![GUI](https://img.shields.io/badge/Windows%20%E5%9B%BE%E5%BD%A2%E7%89%88-%E5%8F%8C%E5%87%BB%E5%8D%B3%E7%94%A8-18b47a.svg)](#图形版双击就能用windows)
 
-零依赖 · 跨平台 · 自动识别认证系统 · 支持 Dr.COM / 深澜 / 锐捷 / 华为 eportal
+零依赖 · 跨平台 · 自动识别认证系统 · 支持 Dr.COM / 深澜 / 锐捷 / 新旧版 eportal
 
 **已在真实校园网环境实测通过。** 欢迎其它学校的同学跑 `campusnet detect` 反馈指纹，一起把覆盖面做广。
 
@@ -300,6 +300,7 @@ campusnet doctor
 | `srun` | 深澜 Srun | 已实现，待验证 |
 | `ruijie` | 锐捷 Ruijie | 已实现，待验证 |
 | `eportal` | 华为 / 通用 eportal | 已实现，待验证 |
+| `eportal_portal` | 新版 eportal（`portal/login` JSONP 接口） | 已实现，待验证 |
 | `custom` | 自定义模板 | ✅ |
 | `auto` | 自动探测（默认） | ✅ |
 

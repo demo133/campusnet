@@ -8,6 +8,7 @@
 | `srun` | 页面/URL 含 `srun_portal`、`cgi-bin/get_challenge`；`ac_id` | `GET /cgi-bin/get_challenge` → `GET /cgi-bin/srun_portal` | 已实现，待更多学校验证 |
 | `ruijie` | 页面含 `InterFace.do`、`queryString` | `POST /eportal/InterFace.do?method=login` | 已实现，待更多学校验证 |
 | `eportal` | 页面含 `c=ACSetting&a=Login`、`wlanuserip` | `POST /eportal/?c=ACSetting&a=Login` | 已实现，待更多学校验证 |
+| `eportal_portal` | URL 含 `eportal/portal/login`、`dr1003`、`jsVersion` | `GET /eportal/portal/login`（JSONP `dr1003`） | 已实现，待更多学校验证 |
 | `custom` | 不参与识别，必须显式指定 | 模板拼接，见 README | ✅ |
 
 ## 三种协议的细节
@@ -80,6 +81,27 @@ body: userId=<账号>&password=<密码>&service=<服务名>
 
 `queryString` 是页面 URL 里带的 `wlanuserip=...&wlanacname=...&nasip=...`，
 通常从门户页面的 JS 变量里抠。抠不到时会退化拼一个，多数学校也能过。
+
+### 新版 eportal（portal/login JSONP）
+
+较新的 eportal 部署把认证挪到了一条 **GET** 查询串接口上，
+老接口（`ACSetting` / `InterFace.do`）在这类门户上不存在：
+
+```
+GET http://<portal>:801/eportal/portal/login?callback=dr1003
+    &login_method=1&user_account=<账号>&user_password=<密码>
+    &wlan_user_ip=<本机IP>&wlan_user_ipv6=&wlan_user_mac=000000000000
+    &wlan_ac_ip=&wlan_ac_name=&jsVersion=4.2.1&terminal_type=1
+    &lang=zh-cn&v=5911
+
+→ dr1003({"result":1,"msg":"认证成功","valid":1})
+```
+
+* `result == 1` 成功；`msg` 带人类可读的失败原因，也用它识别「已在线」
+* **运营商就是账号后缀**：`@cmcc` / `@unicom` / `@telecom`，校园网不带后缀，
+  由 `carrier` 选项自动翻译
+* 识别靠 URL 里的 `portal/login` + `dr1003` + `jsVersion` —— 这些参数在
+  网关 302 的 `Location` 里就带着，所以探测阶段会把重定向地址补进指纹上下文
 
 ## 新增一个 Provider
 

@@ -123,7 +123,8 @@ def _looks_like_portal(resp: Response) -> bool:
         return False
     text = resp.text.lower()
     hints = ("eportal", "srun_portal", "acsetting", "ddddd", "upass",
-             "wlanuserip", "webloginid", "interface.do", "登录", "认证")
+             "wlanuserip", "webloginid", "interface.do", "portal/login",
+             "登录", "认证")
     return any(hint in text for hint in hints)
 
 
@@ -216,6 +217,15 @@ def detect(session: Session, cfg: Config, status: Optional[NetStatus] = None) ->
             continue
 
         ctx = DetectContext(url=candidate + "/", response=resp, text=resp.text, headers=resp.headers)
+        # 302/307 的 Location 往往才是真正带参数的门户地址
+        # （形如 portal/login?wlan_user_ip=...&jsVersion=...）—— 那串参数是
+        # 最强的指纹，丢了它新版门户就认不出来了。只补同源的，别把别的
+        # 候选的地址串门串进来。
+        redirect = status.portal_url or ""
+        if redirect and origin(redirect) == origin(candidate + "/"):
+            ctx.url = redirect
+            ctx.text = (resp.text or "") + "\n" + redirect
+
         scores = fingerprint(ctx)
 
         result.portal = candidate + "/"
