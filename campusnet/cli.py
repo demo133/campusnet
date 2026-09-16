@@ -10,7 +10,7 @@ import subprocess
 import sys
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from . import __version__, autostart, carrier, wifi
+from . import __version__, autostart, carrier, singleton, wifi
 from .config import (
     Config,
     _keyring_set,
@@ -378,6 +378,11 @@ def cmd_once(args) -> int:
 
 
 def cmd_watch(args) -> int:
+    # 单实例锁：已有守护在跑就安静退出，避免两个 watcher 抢同一块网卡
+    if not singleton.acquire():
+        if not getattr(args, "quiet", False):
+            print("campusnet watch 已有实例在运行，本次启动退出。")
+        return 0
     runner = _make_runner(args)
     if getattr(args, "wifi", None):
         runner.cfg.wifi_ssid = args.wifi

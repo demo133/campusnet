@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from .config import Config
+from .procflags import no_window_kwargs
 from .providers import DetectContext, fingerprint, rank
 from .session import HttpError, Response, Session, origin
 
@@ -145,6 +146,7 @@ def default_gateway() -> str:
         try:
             completed = subprocess.run(
                 command, capture_output=True, text=True, timeout=4, errors="replace",
+                **no_window_kwargs(),
             )
             output = completed.stdout or ""
         except Exception:  # noqa: BLE001 - 取不到就用别的办法

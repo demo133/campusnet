@@ -19,6 +19,8 @@ import shutil
 import subprocess
 import sys
 
+from .procflags import no_window_kwargs
+
 APP_NAME = "campusnet"
 LABEL = "com.campusnet.watch"
 
@@ -83,7 +85,8 @@ def _run_quiet(command: list, text: bool = False):
     """
     try:
         return subprocess.run(command, capture_output=True, text=text,
-                              errors="replace", check=False)
+                              errors="replace", check=False,
+                              **no_window_kwargs())
     except Exception:  # 探测类操作不该影响安装结果
         return None
 

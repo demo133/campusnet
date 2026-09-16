@@ -45,6 +45,8 @@ import time
 from dataclasses import dataclass, field
 from typing import List, Sequence, Tuple
 
+from .procflags import no_window_kwargs
+
 #: 单条命令的超时（秒）。netsh 偶尔会卡住，必须兜住。
 COMMAND_TIMEOUT = 10
 
@@ -113,6 +115,7 @@ def _run(command: Sequence[str]) -> Tuple[int, str]:
             text=True,
             errors="replace",
             timeout=COMMAND_TIMEOUT,
+            **no_window_kwargs(),
         )
     except Exception:  # noqa: BLE001 - 探测类操作不该影响主流程
         return 127, ""
