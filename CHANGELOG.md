@@ -3,6 +3,20 @@
 本文件记录所有值得注意的改动。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.1.2] - 2026-09-17
+
+### 新增
+
+- **新版 eportal 门户支持**（`eportal_portal`）——
+  一类较新的 eportal 部署把认证挪到了 `GET /eportal/portal/login`
+  （JSONP 回调响应，参数全在查询串里），老接口（`ACSetting` /
+  `InterFace.do`）在这类门户上不存在，此前完全无法使用。现在：
+  - 指纹识别覆盖这类门户（关键参数在网关 302 的重定向地址里，
+    探测阶段会把它补进指纹上下文）；
+  - 运营商下拉框对应**账号后缀**（`@cmcc` / `@unicom` / `@telecom`，
+    校园网不带后缀），`carrier` 选项自动翻译；
+  - 支持 801 / 803 端口候选与「已在线」识别。
+
 ## [0.1.1] - 2026-09-16
 
 ### 修复
