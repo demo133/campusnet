@@ -8,4 +8,4 @@ from .session import Response, Session  # noqa: F401
 
 __all__ = ["Config", "Session", "Response", "load_config", "default_config_path", "__version__"]
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"

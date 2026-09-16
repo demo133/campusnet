@@ -139,7 +139,9 @@ class App:
     def _build_window(self) -> None:
         self.root.title("{} v{}".format(APP_TITLE, __version__))
         self.root.geometry("560x560")
-        self.root.resizable(False, False)
+        # 可缩放 + 设下限：小屏/高缩放本子上内容放得下放不下，用户都能自救
+        self.root.resizable(True, True)
+        self.root.minsize(420, 420)
         self.root.configure(bg=BG)
         try:
             from ._icon_data import ICON_PNG_B64
@@ -227,13 +229,36 @@ class App:
         from tkinter import ttk
 
         self.setup_frame = tk.Frame(self.root, bg=BG)
-        head = self._label(self.setup_frame, "填写上网信息",
+
+        # 表单比窗口高时（小屏 / 150% 缩放的本子）必须能滚动，否则填不到底。
+        # 滚轮在 show_setup 里绑定、切走时解绑，避免劫持日志区的滚动。
+        canvas = tk.Canvas(self.setup_frame, bg=BG, highlightthickness=0)
+        vsb = ttk.Scrollbar(self.setup_frame, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=vsb.set)
+        vsb.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+        inner = tk.Frame(canvas, bg=BG)
+        canvas.create_window((0, 0), window=inner, anchor="nw", tags="inner")
+        inner.bind("<Configure>",
+                   lambda _e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.bind("<Configure>",
+                    lambda _e: canvas.itemconfigure("inner", width=_e.width))
+        self._setup_canvas = canvas
+        self._setup_inner = inner
+
+        def _wheel(e) -> None:
+            step = -1 if getattr(e, "delta", 0) > 0 else 1
+            canvas.yview_scroll(step, "units")
+
+        self._setup_wheel = _wheel
+
+        head = self._label(inner, "填写上网信息",
                            bg_=BG, font=FONT_TITLE)
         head.pack(pady=(22, 2))
-        self._label(self.setup_frame, "只需要填一次，以后开机就会自动连。",
+        self._label(inner, "只需要填一次，以后开机就会自动连。",
                     bg_=BG, fg=MUTED, font=FONT_SMALL).pack(pady=(0, 10))
 
-        card = tk.Frame(self.setup_frame, bg=CARD, padx=18, pady=14,
+        card = tk.Frame(inner, bg=CARD, padx=18, pady=14,
                         highlightbackground="#e5e7eb", highlightthickness=1)
         card.pack(fill="x", padx=24)
 
@@ -283,29 +308,33 @@ class App:
         chk_auto.grid(row=12, column=0, sticky="w", pady=(8, 0))
         card.grid_columnconfigure(0, weight=1)
 
-        self.lbl_setup_error = self._label(self.setup_frame, "", bg_=BG,
+        self.lbl_setup_error = self._label(inner, "", bg_=BG,
                                            fg=RED, font=FONT_SMALL)
         self.lbl_setup_error.pack(fill="x", padx=26, pady=(8, 0))
 
-        btns = tk.Frame(self.setup_frame, bg=BG)
+        btns = tk.Frame(inner, bg=BG)
         btns.pack(fill="x", padx=24, pady=10)
         self.btn_save = self._button(btns, "保存并立即连接", self.save_setup, "primary")
         self.btn_save.pack(side="left")
         self.btn_back = self._button(btns, "返回", self.show_main)
         self.btn_back.pack(side="left", padx=(10, 0))
         self._hint_stored = self._label(
-            self.setup_frame, "", bg_=BG, fg=MUTED, font=FONT_SMALL)
-        self._hint_stored.pack(fill="x", padx=26, pady=(2, 0))
+            inner, "", bg_=BG, fg=MUTED, font=FONT_SMALL)
+        self._hint_stored.pack(fill="x", padx=26, pady=(2, 10))
 
     # ------------------------------------------------------------ 日志区
     def _build_log(self) -> None:
         import tkinter as tk
+        # 注意：这里只构建不布局 —— 布局在 show_main / show_setup 里切换。
+        # 设置页有滚动表单，日志框挤在里面纯属浪费屏幕（截图反馈过），
+        # 只在主面板显示。
         wrap = tk.Frame(self.root, bg=BG)
-        wrap.pack(fill="both", expand=True, padx=24, pady=(6, 14))
+        self.log_wrap = wrap
         self.log_box = tk.Text(wrap, height=9, font=FONT_SMALL, relief="flat",
                                bg=CARD, fg=TEXT, state="disabled", wrap="word",
                                highlightbackground="#e5e7eb", highlightthickness=1,
                                padx=10, pady=8)
+        self.log_box.pack(fill="both", expand=True)
         self.log_box.pack(fill="both", expand=True)
         for tag, color in (("info", MUTED), ("ok", GREEN),
                            ("warn", "#b45309"), ("error", RED), ("debug", "#9ca3af")):
@@ -314,12 +343,19 @@ class App:
     # ------------------------------------------------------------ 显示切换
     def show_main(self) -> None:
         self.setup_frame.pack_forget()
+        try:  # 设置页的滚轮劫持解绑（Text 自己有原生滚动）
+            self.root.unbind_all("<MouseWheel>")
+        except Exception:  # noqa: BLE001
+            pass
+        self.log_wrap.pack(fill="both", expand=True, padx=24, pady=(6, 14))
         self.main_frame.pack(fill="both", expand=True)
         self._spawn(self._job_state)
 
     def show_setup(self, first_time: bool = False) -> None:
         self.main_frame.pack_forget()
+        self.log_wrap.pack_forget()  # 表单要地方，日志回主面板再看
         self.setup_frame.pack(fill="both", expand=True)
+        self.root.bind_all("<MouseWheel>", self._setup_wheel)
         self.lbl_setup_error.configure(text="")
         self.var_username.set(self.cfg.username or "")
         self.var_password.set("")
@@ -336,6 +372,18 @@ class App:
             command=self.show_main if self.cfg.username else (lambda: None))
         if first_time or not self.var_ssid.get():
             self._spawn(self._job_prefill_ssid)
+        self._fit_window_to_setup()
+
+    def _fit_window_to_setup(self) -> None:
+        """窗口高度尽量迁就表单：装得下就撑到内容高，装不下就到屏幕底
+        （剩下的靠滚动）。宽度不动，尊重用户自己拖出来的尺寸。"""
+        self.root.update_idletasks()
+        # 画布自己是「视口」，reqheight 不反映内容 —— 要问 inner frame
+        need = self._setup_inner.winfo_reqheight() + 40  # 40 ≈ 标题栏等边角
+        screen = self.root.winfo_screenheight()
+        target = max(420, min(need, screen - 80))
+        width = self.root.winfo_width() or 560
+        self.root.geometry("{}x{}".format(width, target))
 
     # ------------------------------------------------------------ 队列与刷新
     def _poll_queue(self) -> None:
