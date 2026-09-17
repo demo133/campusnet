@@ -94,6 +94,9 @@ class App:
         self.cfg = self._load_config()
         self._busy = False
         self._icon_ref: Any = None
+        # 双击自动连接只做一次：连不上就交给用户看日志手动处理，
+        # 不然状态刷新会让它无限重试
+        self._auto_connect_done = False
 
         self._build_window()
         self._build_main()
@@ -612,6 +615,13 @@ class App:
         else:
             self.lbl_status.configure(text="正在检查网络…", fg=TEXT)
         self.lbl_detail.configure(text=data.get("detail") or "")
+        # 双击打开就应该自己连：已配置、没联网、还没自动试过 —— 来一次
+        # （只试一次，失败不循环重试；用户要看详情/手动再来点「立即重新认证」）
+        if (data.get("online") is False and data.get("configured")
+                and not self._auto_connect_done and not self._busy):
+            self._auto_connect_done = True
+            self._append_log("检测到还没联网，自动帮你连接一次…", "info")
+            self.connect(force=False)
         src = data.get("password_source") or ""
         pw_text = {
             "keyring": "已保存（系统凭据管理器）",

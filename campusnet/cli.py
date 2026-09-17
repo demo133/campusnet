@@ -1023,6 +1023,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    # 无窗口进程（pythonw / 打包的图形 exe）里 stdout/stderr 是 None：
+    # Console 自己有兜底，但 argparse 解析失败时是它自己直接往 stderr 写的，
+    # 不替换成 devnull 就会以 "'NoneType' has no attribute 'write'" 崩掉。
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w", encoding="utf-8")
     # 必须在解析参数之前调用：argparse 的 help 文本里也有中文，
     # 否则在编不出中文的控制台上 --help 就会崩。
     ensure_output_encoding()

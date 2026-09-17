@@ -93,8 +93,15 @@ def _run_quiet(command: list, text: bool = False):
 
 # -------------------------------------------------------------------- 命令构造
 def _base_command(config_path: str, interval: int = 10) -> list:
-    python = _python_executable()
-    args = [python, "-m", "campusnet", "watch", "--interval", str(interval)]
+    if getattr(sys, "frozen", False):
+        # PyInstaller 打包的图形版：exe 本身就是入口，参数会原样转给 CLI。
+        # 绝不能再带 ``-m campusnet`` —— 那是源码/python 环境的跑法，
+        # 塞给 exe 会得到 argparse 的 "invalid choice"，而且无窗口进程里
+        # stderr 是 None，报错都写不出去，直接弹崩溃对话框。
+        args = [sys.executable, "watch", "--interval", str(interval)]
+    else:
+        args = [_python_executable(), "-m", "campusnet", "watch",
+                "--interval", str(interval)]
     if config_path:
         args += ["--config", config_path]
     return args
