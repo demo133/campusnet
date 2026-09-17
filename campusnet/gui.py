@@ -466,6 +466,13 @@ class App:
             "autostart": autostart.status().startswith("已安装"),
             "configured": self._configured(),
         }
+        # 老版本图形版写坏过自启命令（误带 -m campusnet，重启即崩）：
+        # 打包版检测到就自动重写一次，用户不用手动关了再开
+        if data["autostart"] and getattr(sys, "frozen", False) \
+                and "-m campusnet" in autostart.status():
+            autostart.install()
+            data["autostart"] = autostart.status().startswith("已安装")
+            self.q.put(("log", "检测到旧版写入的开机自启命令有问题，已自动修正", "ok"))
         pw = cfg.resolve_password(prompt=False)
         data["password_source"] = cfg.password_source if pw else ""
         code = cfg.options.get("carrier")
